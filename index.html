@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TDEE Calculator - Hitung Kebutuhan Kalori Harian</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Cover Screen -->
+  <div id="coverScreen">
+    <div class="cover-card">
+      <h1>TDEE Calculator</h1>
+      <h2>Pelajari Berapa Banyak Kalori yang Anda Bakar Setiap Hari</h2>
+      <p1>Gunakan kalkulator TDEE ini untuk mengetahui Total Pengeluaran Energi
+        Harian Anda, yaitu berapa banyak kalori Anda bakar per hari</p1>
+      <p></p>
+     <button id="startBtn">Mulai</button>
+    </div>
+  </div>
+
+  <!-- Main Calculator -->
+  <div class="container" id="inputContainer">
+    <div class="container-header">
+      <h1>Hitung TDEE Anda</h1>
+      <p>Masukkan data diri Anda untuk mengetahui kebutuhan kalori harian</p>
+    </div>
+
+    <div class="metrics-grid">
+      <!-- Gender -->
+      <div class="metric-field">
+        <label for="gender">Jenis Kelamin</label>
+        <select id="gender">
+          <option value="male">Laki-laki</option>
+          <option value="female">Perempuan</option>
+        </select>
+      </div>
+
+      <!-- Age -->
+      <div class="metric-field">
+        <label for="age">Usia (tahun)</label>
+        <input type="number" id="age" min="10" max="120" value="25" placeholder="Masukkan usia Anda">
+      </div>
+
+      <!-- Weight -->
+      <div class="metric-field">
+        <label for="weight">Berat (kg)</label>
+        <input type="number" id="weight" min="20" step="0.1" value="70" placeholder="Masukkan berat badan">
+      </div>
+
+      <!-- Height (for BMR calculation) -->
+      <div class="metric-field">
+        <label for="height">Tinggi (cm)</label>
+        <input type="number" id="height" min="100" step="0.1" value="175" placeholder="Masukkan tinggi badan">
+      </div>
+
+      <!-- Activity Level -->
+      <div class="metric-field">
+        <label for="activity">Level Aktivitas</label>
+        <select id="activity">
+          <option value="1.2">Sangat Ringan (jarang olahraga)</option>
+          <option value="1.375">Ringan (1-3x per minggu)</option>
+          <option value="1.55" selected>Sedang (3-5x per minggu)</option>
+          <option value="1.725">Aktif (6-7x per minggu)</option>
+          <option value="1.9">Sangat Aktif (latihan intens)</option>
+        </select>
+      </div>
+
+      <!-- Body Fat % -->
+      <div class="metric-field">
+        <label for="bodyFat">Body Fat % (Opsional)</label>
+        <input type="number" id="bodyFat" min="5" max="80" step="0.1" placeholder="Masukkan body fat %" title="Jika tidak tahu, biarkan kosong">
+      </div>
+    </div>
+
+    <!-- Calculate Button -->
+    <button class="calculate-btn" id="calcBtn">Hitung TDEE Saya</button>
+  </div>
+
+  <!-- Results Section -->
+  <div class="container" id="resultsContainer" style="display: none;">
+    <div class="results-header">
+      <h1>Hasil Perhitungan TDEE Anda</h1>
+      <button class="back-btn" id="backBtn">← Kembali ke Form</button>
+    </div>
+    <div id="resultsContent"></div>
+  </div>
+
+  <script>
+    // Helper function to format numbers
+    function fmt(n, decimal = 0) {
+      if (!isFinite(n)) return '-';
+      return Math.round(n * Math.pow(10, decimal)) / Math.pow(10, decimal);
+    }
+
+    // Calculate TDEE
+    function calculateTDEE() {
+      const gender = document.getElementById('gender').value;
+      const age = Number(document.getElementById('age').value);
+      const weight = Number(document.getElementById('weight').value);
+      const height = Number(document.getElementById('height').value);
+      const activityFactor = Number(document.getElementById('activity').value);
+      const bodyFat = document.getElementById('bodyFat').value ? Number(document.getElementById('bodyFat').value) : null;
+
+      // Validation
+      if (!age || !weight || !height || age < 10 || weight < 20 || height < 100) {
+        showResults('<div class="result-card"><p style="color: #e74c3c; font-weight: 600;">⚠️ Mohon isi semua data dengan benar</p></div>');
+        return;
+      }
+
+      // Calculate BMR using Mifflin-St Jeor formula
+      let bmr;
+      if (gender === 'male') {
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+      } else {
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+      }
+
+      // Calculate TDEE
+      const tdee = bmr * activityFactor;
+
+      // Calculate LBM if body fat is provided
+      let lbmText = '';
+      if (bodyFat !== null && bodyFat > 0 && bodyFat < 100) {
+        const lbm = weight * (1 - bodyFat / 100);
+        const tdeeKatch = 370 + (21.6 * lbm);
+        lbmText = `
+          <div class="result-card">
+            <div class="result-label">💪 Lean Body Mass (LBM)</div>
+            <div class="result-value">${fmt(lbm, 1)} <span class="result-unit">kg</span></div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">🔥 TDEE (Formula Katch)</div>
+            <div class="result-value">${fmt(tdeeKatch, 0)} <span class="result-unit">kkal/hari</span></div>
+            <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 8px;">Menggunakan body fat percentage</div>
+          </div>
+        `;
+      }
+
+      // Generate results HTML
+      const resultsHTML = `
+        <div class="result-card">
+          <div class="result-label">📈 Basal Metabolic Rate (BMR)</div>
+          <div class="result-value">${fmt(bmr, 0)} <span class="result-unit">kkal/hari</span></div>
+          <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 8px;">Kalori yang dibutuhkan saat istirahat</div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-label">🎯 Total Daily Energy Expenditure (TDEE)</div>
+          <div class="result-value">${fmt(tdee, 0)} <span class="result-unit">kkal/hari</span></div>
+          <div style="font-size: 0.9rem; color: var(--text-light); margin-top: 8px;">
+            <strong>Level Aktivitas:</strong> ${getActivityDescription(activityFactor)}
+          </div>
+        </div>
+
+        ${lbmText}
+
+        <div class="result-card" style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%); border-color: #2ecc71;">
+          <div class="result-label">💡 Kalori Target</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+            <div>
+              <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 5px;">Defisit (turun BB)</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: #e74c3c;">${fmt(tdee - 500, 0)} kkal</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 5px;">Maintenance</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: #f39c12;">${fmt(tdee, 0)} kkal</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 5px;">Surplus (naik BB)</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: #27ae60;">${fmt(tdee + 300, 0)} kkal</div>
+            </div>
+            <div>
+              <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 5px;">Bulk (masa</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: #16a085;">${fmt(tdee + 500, 0)} kkal</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: rgba(30, 64, 175, 0.08); border-radius: 10px; border-left: 4px solid var(--primary);">
+          <p style="margin: 0; font-size: 0.95rem; color: var(--text-dark);">
+            <strong>📌 Tips & Saran:</strong> Gunakan nilai TDEE di atas sebagai dasar untuk program diet Anda. 
+            Sesuaikan asupan kalori berdasarkan tujuan Anda (turun, tetap, atau naik berat badan). Hindari makanan yang tinggi kalori, hindari makanan gorengan, dan tepung tepungan ya.
+            SALAM FITNESS MANIA💪🏼
+          </p>
+        </div>
+      `;
+
+      showResults(resultsHTML);
+    }
+
+    function getActivityDescription(factor) {
+      const descriptions = {
+        1.2: 'Sangat Ringan',
+        1.375: 'Ringan',
+        1.55: 'Sedang',
+        1.725: 'Aktif',
+        1.9: 'Sangat Aktif'
+      };
+      return descriptions[factor] || 'Tidak diketahui';
+    }
+
+    function showResults(html) {
+      const inputContainer = document.getElementById('inputContainer');
+      const resultsContainer = document.getElementById('resultsContainer');
+      const resultsContent = document.getElementById('resultsContent');
+      
+      resultsContent.innerHTML = html;
+      inputContainer.style.display = 'none';
+      resultsContainer.style.display = 'block';
+      
+      // Scroll ke atas untuk melihat hasil
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    function backToForm() {
+      const inputContainer = document.getElementById('inputContainer');
+      const resultsContainer = document.getElementById('resultsContainer');
+      
+      inputContainer.style.display = 'block';
+      resultsContainer.style.display = 'none';
+      
+      // Scroll ke atas
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Event Listeners
+    document.getElementById('calcBtn').addEventListener('click', calculateTDEE);
+    document.getElementById('backBtn').addEventListener('click', backToForm);
+
+    // Enter key to calculate
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        calculateTDEE();
+      }
+    });
+
+    // Cover screen transition
+    document.addEventListener('DOMContentLoaded', () => {
+      const startBtn = document.getElementById('startBtn');
+      const coverScreen = document.getElementById('coverScreen');
+
+      if (startBtn && coverScreen) {
+        startBtn.addEventListener('click', () => {
+          coverScreen.style.opacity = '0';
+          coverScreen.style.pointerEvents = 'none';
+          setTimeout(() => coverScreen.remove(), 300);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
